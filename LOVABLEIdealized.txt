@@ -1,0 +1,2 @@
+
+Create a HelloDB application with React frontend and AWS backend (API Gateway, Lambda, Aurora PostgreSQL). Build a CDK construct for Aurora PostgreSQL Serverless that runs SQL files during deploy. Include Customer/Product/Order tables with relationships. Implement API endpoints for CRUD operations. Create a React UI with tabs for browsing customers/products and creating orders. Use professional styling and ensure proper error handling throughout.

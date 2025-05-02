@@ -1,0 +1,100 @@
+
+User: Build a two-tier web application (called HelloDB) using React for a front end UI and AWS for the back end composed of AWS API Gateway (called DataManagerAPI) and AWS Lambda (called DataManagerFunction), with data stored in a database that is provisioned and configured by a custom CDK construct called AuroraPGServerlessInitializedConstruct.
+
+Start with the AWS back end.
+
+AuroraPGServerlessInitializedConstruct is a CDK construct coded in typescript that can be re-used in any AWS stack. The purpose of AuroraPGServerlessInitializedConstruct is to create and deploy database infrastructure (including table creation and population) entirely within a "CDK deploy", without needing any code pipelines or manual steps after the database is created. 
+
+Implement AuroraPGServerlessInitializedConstruct as follows:
+1.	Creates an Aurora PostgreSQL serverless V2 database.
+2.	Uses secrets manager for storing three sets of credentials: AdminUser, AppUser, CustomResourceUser
+3.	expects that stacks who reuse AuroraPGServerlessInitializedConstruct include a subdirectory called SQLFiles that can hold zero or more SQL files
+4.	has a property called DDLFiles, that is an array of names of zero or more files in the SQLFiles subdirectory
+5.	has a property called SeedDataFiles, that is an array of names of zero or more files in the SQLFiles subdirectory
+6.	has a property called TestFiles, that is an array of names of zero or more files in the SQLFiles subdirectory
+7.	has a lambda-backed custom resource called AuroraPostgreSQLInitializerCR that is invoked during CDK deploy after the database becomes available, and then uses the credentials in CustomResourceUser to:
+a.	load and run each of the SQL files in DDLFiles, which are intended to create tables and relationships, and then 
+b.	load and run each of the SQL files in SeedDataFiles, which are intended to populate initial seed data into the tables available after the DDLFiles are run, and then
+c.	load and run each of the SQL files in TestFiles, which are intended to populate test data into the tables available after the DDLFiles are run.
+d.	Includes ample logging so it is easy to identify and resolve errors that occur while the custom resource is working, where the errors may include among other things: can't find path, can't find files, can't access database, database errors or SQL errors arising from the SQL files, etc.
+8.	Exposes properties that can be used by a calling stack to control the important behaviors of the construct including DBName, cluster configuration properties (defaults to least expensive cluster settings), relative path to SQLFiles, DDLFiles, SeedDataFiles, SeedDataFiles, vpc.
+9.	has construct outputs that include: DBName, DB ARN, ARNs of the secrets, and any other attributes that will make it convenient for authorized callers to access the database.
+
+Implement a CDK stack called AuroraPGServerlessInitializedConstructTestStack coded in typescript and as follows:
+1.	Instantiates the AuroraPGServerlessInitializedConstruct as follows:
+a.	Two generated SQL files for DDLFiles, each of which has DDL SQL to create three simple tables related to Customers, Orders, and Products with some simple columns and primary key and foreign key relationships.
+b.	Two generated SQL files for TestFiles, each of which populates the tables created in DDLFiles with a few dozen realistic rows per table.
+2.	Instantiates and configures DataManagerAPI and DataManagerFunction.
+3.	Has stack outputs that include attributes that will make it convenient for me see and use resources of the stack.
+
+Implement DataManagerAPI as AWS API Gateway in CDK typescript infrastructure as code. DataManagerAPI should be invocable by any origin, and has the following paths:
+•	Path 1: "GetProducts" accepts one optional argument ("ProductID") a 5 character string that uniquely identifies a Product, and returns a JSON array of JSON objects representing up to 100 Products.
+•	Path 2: "GetCustomers" accepts one optional argument ("CustomerID") a 5 character string that uniquely identifies a Customer, and returns a JSON array of JSON objects representing up to 100 Customers.
+•	Path 3: "GetOrders" accepts 3 optional arguments ("CustomerID", "ProductID") and returns JSON arrays of JSON objects representing all Orders for up to 100 Customers.
+•	Path 4: "TransactOrder" accepts 2 required arguments ("CustomerID", "ProductID") and returns a code and message indicating failure or success.
+
+Implement DataManagerFunction as AWS Lambda in CDK typescript infrastructure as code with various handler functions so the same lambda can be used for all paths of DataManagerAPI. DataManagerFunction should further be implemented as follows:
+•	The code of DataManagerFunction should be typescript. 
+•	Make sure all DataManagerFunction paths that return a response to the API include headers that allow all origins and optional credentials.
+•	When DataManagerFunction handles an API request for the GetProducts API path, it returns the specified Product, or if no ProductID is specified returns all Products.
+•	When DataManagerFunction handles an API request for the GetCustomers API path, it returns the specified Customer, or if no CustomerID is specified returns all Customers.
+•	When DataManagerFunction handles an API request for the GetOrders API path, it returns all Orders filtered by matching CustomerID and or ProductID. 
+•	When DataManagerFunction handles an API request for the TransactOrder API path, it creates and inserts a new Order for CustomerID buying ProductID.  It handles all expectable errors, such as unknown Customer and others.
+
+A "cdk deploy" of AuroraPGServerlessInitializedConstructTestStack should be able to do all of the following without any pipelines or further manual steps:
+•	deploy the stack including AuroraPGServerlessInitializedConstruct
+•	create tables in the database (via AuroraPostgreSQLInitializerCR)
+•	populate the tables in the database (via AuroraPostgreSQLInitializerCR)
+Create several example AWS CLI commands that can use AppUser credentials to INSERT, UPDATE, DELETE, and SELECT data from the database via the AWS CLI and display the results at the command line and also pipe the results to a similarly named file. Save these examples in individual files called Example01.sql, Example02.sql, and so on.
+
+Now let's work on the front end.
+
+Implement the HelloDB UI as a react app with 3 tabs:
+1.	Browse and search Customers.
+2.	Browse and Search Products.
+3.	Brows and Transact Orders. This tab has a Drop Down for selecting a Customer and another Drop Down for selecting a Product, and a Command button to Transact the order.
+
+
+Knowledge:
+
+You seem to always ignore the "Knowledge" and have not ever implemented the "Knowledge" until I paste it manually into the chat. Explain why you are always ignoring the "Knowledge". Here is the "Knowledge" so you can include it in this build:
+
+If you're ever about to fail because you want to edit a file that you don't have permission to edit, don't fail, instead for every file that you want to edit but don't have permissions to edit, create a new file named XXXLOVABLEMANUAL where XXX is replaced by the name of the file you want to edit but can't. Then put the whole contents that you want into  XXXLOVABLEMANUAL in the same directory as the original file. Then I will go and manually make the replacement because I have permission. Whenever you do this tell me in the chat which files and which paths I need to go and manually edit.
+
+Every time you make changes to code, also generate three files and save them and the topmost folder of the code: 
+LOVABLEtranscript.txt is the full transcript to this point for the current project.
+LOVABLEOneShot.txt is your best version of a complete prompt that would generate the entire current version of the project in a one-shot prompt.
+LOVABLEIdealized.txt is your best and shortest version of a prompt that would generate the entire current version of the project in a one-shot prompt
+
+For all code you write, include ample comments to allow a beginning coder to understand what you are doing and why you are doing it. Also include ample logging so it is easy for me to find and fix errors.
+
+You cause this error frequently: "error TS18026: '#!' can only be used at the start of a file.". Whenever you get this error, make sure to remove the empty line before the shebang. 
+
+AI: I'm inspired by your request to build a two-tier web application called HelloDB. This project will combine a React frontend with an AWS backend infrastructure using API Gateway, Lambda, and an Aurora PostgreSQL serverless database.
+
+Drawing inspiration from enterprise database applications, I'll create a clean, functional interface that communicates seamlessly with our AWS backend. For the design, I'll use a professional color scheme with shades of blue and gray to convey reliability and data integrity.
+
+For this first version, I'll implement:
+
+1. **AWS Backend Infrastructure:**
+   - Custom CDK construct for Aurora PostgreSQL serverless
+   - Database initialization with tables, relationships and test data
+   - API Gateway with required endpoints
+   - Lambda function to handle database operations
+
+2. **React Frontend Features:**
+   - Three-tab interface for browsing/searching Customers and Products
+   - Order transaction functionality
+   - Clean, responsive design with data tables
+   - Form validation and error handling
+
+I'll use a modern, professional color palette:
+- Primary: #2563eb (medium blue)
+- Secondary: #f8fafc (light gray)
+- Accent: #0ea5e9 (sky blue)  
+- Text: #1e293b (dark slate)
+- Background: #ffffff (white)
+
+Let's start by implementing the AWS backend components first, then move on to the React frontend.
+
+[Extensive code implementation of both AWS backend and React frontend]

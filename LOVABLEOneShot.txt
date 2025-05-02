@@ -1,0 +1,30 @@
+
+Build a two-tier web application called HelloDB with a React frontend and AWS backend (API Gateway, Lambda, Aurora PostgreSQL Serverless). 
+
+For the AWS backend:
+1. Create a reusable CDK construct called AuroraPGServerlessInitializedConstruct that:
+   - Creates an Aurora PostgreSQL Serverless V2 database
+   - Uses Secrets Manager for AdminUser, AppUser, and CustomResourceUser credentials
+   - Has a lambda-backed custom resource that runs SQL files (DDLFiles, SeedDataFiles, TestFiles) during deployment
+   - Handles comprehensive logging and error handling
+   - Exposes configuration properties and outputs relevant resource information
+
+2. Create a test stack AuroraPGServerlessInitializedConstructTestStack that:
+   - Instantiates the construct with SQL files for Customers, Products, and Orders tables
+   - Populates test data during deployment
+   - Creates DataManagerAPI with GetProducts, GetCustomers, GetOrders, and TransactOrder endpoints
+   - Implements DataManagerFunction to handle all API requests with proper CORS headers
+   - Outputs all relevant stack resources for easy access
+
+3. Create example AWS CLI commands for database operations in separate SQL files
+
+For the React frontend, implement a responsive tabbed interface with:
+1. Customers Tab - Browse and search functionality with a data table
+2. Products Tab - Browse and search functionality with a data table 
+3. Orders Tab - View orders and create new transactions with dropdown selectors
+
+Use a professional blue and gray color scheme that communicates reliability and data integrity. Ensure proper error handling, loading states, and user feedback throughout the application. Include detailed comments and logging in all code for maintainability.
+
+Generate LOVABLEtranscript.txt, LOVABLEOneShot.txt, and LOVABLEIdealized.txt files with the complete project transcript and condensed prompts. Implement shebang lines correctly in Node.js files.
+
+For any files that can't be edited directly, create alternative versions with XXXLOVABLEMANUAL naming convention and provide instructions for manual replacement.
