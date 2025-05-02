@@ -1,11 +1,24 @@
+
 import React, { useState, useEffect } from 'react';
 import { ApiService } from '../services/ApiService';
 import { Customer } from '../types';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 
 const CustomerTab: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchId, setSearchId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -13,6 +26,7 @@ const CustomerTab: React.FC = () => {
 
   const fetchCustomers = async () => {
     try {
+      setLoading(true);
       const fetchedCustomers = searchId
         ? await ApiService.getCustomers(searchId)
         : await ApiService.getCustomers();
@@ -21,6 +35,8 @@ const CustomerTab: React.FC = () => {
     } catch (e: any) {
       setError(e.message || 'Failed to fetch customers');
       setCustomers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -34,53 +50,64 @@ const CustomerTab: React.FC = () => {
   };
 
   return (
-    <div className="customer-tab">
-      <h2>Customers</h2>
-      <form onSubmit={handleSearchSubmit}>
-        <input
-          type="text"
-          placeholder="Search by Customer ID"
-          value={searchId}
-          onChange={handleSearchChange}
-        />
-        <button type="submit">Search</button>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Customers</h2>
+      
+      <form onSubmit={handleSearchSubmit} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            type="text"
+            placeholder="Search by Customer ID"
+            value={searchId}
+            onChange={handleSearchChange}
+            className="pl-8"
+          />
+        </div>
+        <Button type="submit">Search</Button>
       </form>
-      {error && <div className="error">{error}</div>}
-      {customers.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>City</th>
-              <th>State</th>
-              <th>Postal Code</th>
-              <th>Country</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((customer) => (
-              <tr key={customer.CustomerID}>
-                <td>{customer.CustomerID}</td>
-                <td>{customer.FirstName}</td>
-                <td>{customer.LastName}</td>
-                <td>{customer.Email}</td>
-                <td>{customer.Phone}</td>
-                <td>{customer.Address}</td>
-                <td>{customer.City}</td>
-                <td>{customer.State}</td>
-                <td>{customer.PostalCode}</td>
-                <td>{customer.Country}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      
+      {error && <div className="p-4 text-white bg-red-500 rounded">{error}</div>}
+      
+      {loading ? (
+        <div className="text-center py-8">Loading customers...</div>
+      ) : customers.length > 0 ? (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>State</TableHead>
+                <TableHead>Postal Code</TableHead>
+                <TableHead>Country</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {customers.map((customer) => (
+                <TableRow key={customer.CustomerID}>
+                  <TableCell>{customer.CustomerID}</TableCell>
+                  <TableCell>{customer.FirstName}</TableCell>
+                  <TableCell>{customer.LastName}</TableCell>
+                  <TableCell>{customer.Email}</TableCell>
+                  <TableCell>{customer.Phone}</TableCell>
+                  <TableCell>{customer.Address}</TableCell>
+                  <TableCell>{customer.City}</TableCell>
+                  <TableCell>{customer.State}</TableCell>
+                  <TableCell>{customer.PostalCode}</TableCell>
+                  <TableCell>{customer.Country}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
-        <div>No customers found.</div>
+        <div className="text-center py-8">No customers found.</div>
       )}
     </div>
   );

@@ -1,10 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { ApiService } from '@/services/ApiService';
 import { Product } from '@/types';
-import { Table, Input, Space, Button } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import Highlighter from 'react-highlight-words';
-import { SearchOutlined } from '@ant-design/icons';
+import { Search } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface DataType {
   key: string;
@@ -20,18 +28,36 @@ const ProductTab: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [searchedColumn, setSearchedColumn] = useState('');
-  const [searchInput, setSearchInput] = useState<Input | null>(null);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Filter products when searchText changes
+  useEffect(() => {
+    if (!searchText) {
+      setFilteredProducts(products);
+    } else {
+      const lowercasedFilter = searchText.toLowerCase();
+      const filtered = products.filter(item => {
+        return (
+          item.ProductID.toLowerCase().includes(lowercasedFilter) ||
+          item.ProductName.toLowerCase().includes(lowercasedFilter) ||
+          (item.Category && item.Category.toLowerCase().includes(lowercasedFilter)) ||
+          (item.Description && item.Description.toLowerCase().includes(lowercasedFilter))
+        );
+      });
+      setFilteredProducts(filtered);
+    }
+  }, [searchText, products]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const data = await ApiService.getProducts();
       setProducts(data);
+      setFilteredProducts(data);
     } catch (error) {
       console.error('Failed to fetch products:', error);
     } finally {
@@ -39,141 +65,57 @@ const ProductTab: React.FC = () => {
     }
   };
 
-  const handleSearch = (selectedKeys: string[], confirm: (param?: any) => void, dataIndex: string) => {
-    confirm();
-    setSearchText(selectedKeys[0]);
-    setSearchedColumn(dataIndex);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(e.target.value);
   };
-
-  const handleReset = (clearFilters: () => void) => {
-    clearFilters();
-    setSearchText('');
-  };
-
-  const getColumnSearchProps = (dataIndex: string): ColumnsType<DataType>[0] => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }}>
-        <Input
-          ref={node => {
-            setSearchInput(node);
-          }}
-          placeholder={`Search ${dataIndex}`}
-          value={selectedKeys[0]}
-          onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Search
-          </Button>
-          <Button onClick={() => handleReset(clearFilters)} size="small" style={{ width: 90 }}>
-            Reset
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              confirm({ closeDropdown: false });
-              setSearchText((selectedKeys as string[])[0]);
-              setSearchedColumn(dataIndex);
-            }}
-          >
-            Filter
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
-    onFilter: (value, record) =>
-      record[dataIndex]
-        .toString()
-        .toLowerCase()
-        .includes((value as string).toLowerCase()),
-    onFilterDropdownVisibleChange: visible => {
-      if (visible && searchInput) {
-        setTimeout(() => searchInput.select(), 100);
-      }
-    },
-    render: text =>
-      searchedColumn === dataIndex ? (
-        <Highlighter
-          highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
-          searchWords={[searchText]}
-          autoEscape
-          textToHighlight={text ? text.toString() : ''}
-        />
-      ) : (
-        text
-      ),
-  });
-
-  const columns: ColumnsType<DataType> = [
-    {
-      title: 'Product ID',
-      dataIndex: 'productID',
-      key: 'productID',
-      ...getColumnSearchProps('productID'),
-    },
-    {
-      title: 'Product Name',
-      dataIndex: 'productName',
-      key: 'productName',
-      ...getColumnSearchProps('productName'),
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-    },
-    {
-      title: 'Category',
-      dataIndex: 'category',
-      key: 'category',
-      filters: [
-        ...new Set(products.map(product => product.Category)).values()
-      ].map(category => ({
-        text: category,
-        value: category,
-      })),
-      onFilter: (value: string, record: Product) => record.Category === value,
-    },
-    {
-      title: 'Price',
-      dataIndex: 'Price',
-      key: 'Price',
-      sorter: (a: Product, b: Product) => a.Price - b.Price,
-    },
-    {
-      title: 'Stock Quantity',
-      dataIndex: 'StockQuantity',
-      key: 'StockQuantity',
-      sorter: (a: Product, b: Product) => a.StockQuantity - b.StockQuantity,
-    },
-  ];
-
-  const data: DataType[] = products.map(product => ({
-    key: product.ProductID,
-    productID: product.ProductID,
-    productName: product.ProductName,
-    description: product.Description,
-    category: product.Category,
-    Price: product.Price,
-    stockQuantity: product.StockQuantity,
-  }));
 
   return (
-    <Table<DataType>
-      columns={columns}
-      dataSource={data}
-      loading={loading}
-    />
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Products</h2>
+
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+        <Input
+          placeholder="Search products..."
+          value={searchText}
+          onChange={handleSearchChange}
+          className="pl-8"
+        />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8">Loading products...</div>
+      ) : filteredProducts.length > 0 ? (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product ID</TableHead>
+                <TableHead>Product Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Stock</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.map((product) => (
+                <TableRow key={product.ProductID}>
+                  <TableCell>{product.ProductID}</TableCell>
+                  <TableCell>{product.ProductName}</TableCell>
+                  <TableCell>{product.Description}</TableCell>
+                  <TableCell>{product.Category}</TableCell>
+                  <TableCell>${product.Price.toFixed(2)}</TableCell>
+                  <TableCell>{product.StockQuantity}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="text-center py-8">No products found.</div>
+      )}
+    </div>
   );
 };
 

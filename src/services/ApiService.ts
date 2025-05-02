@@ -1,30 +1,42 @@
 
-/**
- * Service for interacting with the HelloDB API
- * Provides methods for fetching customers, products, orders and creating new orders
- */
-export class ApiService {
-  // Base URL for the API - this would be replaced with the actual API URL from CDK outputs
-  private static readonly API_BASE_URL = 'https://yourapigatewayurl.execute-api.region.amazonaws.com/prod';
+import { Customer, Product, Order } from '@/types';
+import { MockApiService } from './MockApiService';
+
+class ApiServiceClass {
+  private baseUrl: string;
+  private useMock: boolean;
+
+  constructor() {
+    // This will need to be updated with the real API endpoint after CDK deployment
+    this.baseUrl = 'https://your-api-gateway-url.amazonaws.com';
+    
+    // Use mock service for development
+    this.useMock = true;
+  }
 
   /**
-   * Fetch all customers or a specific customer by ID
-   * @param customerId Optional customer ID to fetch a specific customer
-   * @returns Promise resolving to customers data
+   * Get all customers or a specific customer by ID
    */
-  static async getCustomers(customerId?: string) {
+  async getCustomers(customerId?: string): Promise<Customer[]> {
+    // Use mock service for development
+    if (this.useMock) {
+      return MockApiService.getCustomers(customerId);
+    }
+    
     try {
-      const url = new URL(`${this.API_BASE_URL}/GetCustomers`);
+      let url = `${this.baseUrl}/GetCustomers`;
       if (customerId) {
-        url.searchParams.append('CustomerID', customerId);
+        url += `?CustomerID=${encodeURIComponent(customerId)}`;
       }
+
+      const response = await fetch(url);
       
-      const response = await fetch(url.toString());
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to fetch customers: ${response.status} ${response.statusText}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [data];
     } catch (error) {
       console.error('Error fetching customers:', error);
       throw error;
@@ -32,23 +44,28 @@ export class ApiService {
   }
 
   /**
-   * Fetch all products or a specific product by ID
-   * @param productId Optional product ID to fetch a specific product
-   * @returns Promise resolving to products data
+   * Get all products or a specific product by ID
    */
-  static async getProducts(productId?: string) {
+  async getProducts(productId?: string): Promise<Product[]> {
+    // Use mock service for development
+    if (this.useMock) {
+      return MockApiService.getProducts(productId);
+    }
+    
     try {
-      const url = new URL(`${this.API_BASE_URL}/GetProducts`);
+      let url = `${this.baseUrl}/GetProducts`;
       if (productId) {
-        url.searchParams.append('ProductID', productId);
+        url += `?ProductID=${encodeURIComponent(productId)}`;
       }
+
+      const response = await fetch(url);
       
-      const response = await fetch(url.toString());
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [data];
     } catch (error) {
       console.error('Error fetching products:', error);
       throw error;
@@ -56,27 +73,39 @@ export class ApiService {
   }
 
   /**
-   * Fetch orders with optional filtering by customer ID or product ID
-   * @param customerId Optional customer ID to filter orders
-   * @param productId Optional product ID to filter orders
-   * @returns Promise resolving to orders data
+   * Get orders filtered by customer ID and/or product ID
    */
-  static async getOrders(customerId?: string, productId?: string) {
+  async getOrders(customerId?: string, productId?: string): Promise<Order[]> {
+    // Use mock service for development
+    if (this.useMock) {
+      return MockApiService.getOrders(customerId, productId);
+    }
+    
     try {
-      const url = new URL(`${this.API_BASE_URL}/GetOrders`);
+      let url = `${this.baseUrl}/GetOrders`;
+      const params = new URLSearchParams();
+      
       if (customerId) {
-        url.searchParams.append('CustomerID', customerId);
+        params.append('CustomerID', customerId);
       }
+      
       if (productId) {
-        url.searchParams.append('ProductID', productId);
+        params.append('ProductID', productId);
       }
       
-      const response = await fetch(url.toString());
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+
+      const response = await fetch(url);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Error fetching orders:', error);
       throw error;
@@ -85,39 +114,35 @@ export class ApiService {
 
   /**
    * Create a new order for a customer and product
-   * @param customerId Customer ID making the order
-   * @param productId Product ID being ordered
-   * @returns Promise resolving to order creation result
    */
-  static async createOrder(customerId: string, productId: string) {
+  async createOrder(customerId: string, productId: string): Promise<any> {
+    // Use mock service for development
+    if (this.useMock) {
+      return MockApiService.createOrder(customerId, productId);
+    }
+    
     try {
-      const url = new URL(`${this.API_BASE_URL}/TransactOrder`);
-      url.searchParams.append('CustomerID', customerId);
-      url.searchParams.append('ProductID', productId);
+      const url = `${this.baseUrl}/TransactOrder?CustomerID=${encodeURIComponent(customerId)}&ProductID=${encodeURIComponent(productId)}`;
       
-      const response = await fetch(url.toString(), {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to create order: ${response.status} ${response.statusText}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Error creating order:', error);
       throw error;
     }
   }
-
-  /**
-   * Update the API base URL - useful for configuration after deployment
-   * @param newUrl The new API base URL
-   */
-  static updateApiBaseUrl(newUrl: string) {
-    (this as any).API_BASE_URL = newUrl;
-  }
 }
+
+// Export a singleton instance
+export const ApiService = new ApiServiceClass();

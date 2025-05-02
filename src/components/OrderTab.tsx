@@ -1,8 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { ApiService } from '@/services/ApiService';
-import { Customer } from '@/types/Customer';
-import { Product } from '@/types/Product';
-import styles from './OrderTab.module.css';
+import { Customer, Product } from '@/types';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShoppingCart } from 'lucide-react';
 
 const OrderTab: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -11,6 +21,7 @@ const OrderTab: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [orderResult, setOrderResult] = useState<any>(null);
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -19,6 +30,7 @@ const OrderTab: React.FC = () => {
         setCustomers(data);
       } catch (err: any) {
         setError(`Failed to fetch customers: ${err.message}`);
+        toast.error(`Failed to fetch customers: ${err.message}`);
       }
     };
 
@@ -28,6 +40,7 @@ const OrderTab: React.FC = () => {
         setProducts(data);
       } catch (err: any) {
         setError(`Failed to fetch products: ${err.message}`);
+        toast.error(`Failed to fetch products: ${err.message}`);
       }
     };
 
@@ -35,70 +48,110 @@ const OrderTab: React.FC = () => {
     fetchProducts();
   }, []);
 
-  const handleCustomerChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCustomer(event.target.value);
+  const handleCustomerChange = (value: string) => {
+    setSelectedCustomer(value);
   };
 
-  const handleProductChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedProduct(event.target.value);
+  const handleProductChange = (value: string) => {
+    setSelectedProduct(value);
   };
 
   const handleCreateOrder = async () => {
     if (!selectedCustomer || !selectedProduct) {
       setError('Please select a customer and a product.');
+      toast.error('Please select a customer and a product.');
       return;
     }
 
+    setLoading(true);
     try {
       const result = await ApiService.createOrder(selectedCustomer, selectedProduct);
       setOrderResult(result);
       setError('');
+      toast.success('Order created successfully!');
     } catch (err: any) {
       setError(`Failed to create order: ${err.message}`);
+      toast.error(`Failed to create order: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const getCustomerName = (id: string) => {
+    const customer = customers.find(c => c.CustomerID === id);
+    return customer ? `${customer.FirstName} ${customer.LastName}` : '';
+  };
+
+  const getProductName = (id: string) => {
+    const product = products.find(p => p.ProductID === id);
+    return product ? product.ProductName : '';
+  };
+
   return (
-    <div className={styles.orderTab}>
-      <h2>Create New Order</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle>Create New Order</CardTitle>
+        <CardDescription>Select a customer and product to create a new order</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && <div className="p-4 text-white bg-red-500 rounded">{error}</div>}
 
-      {error && <div className={styles.error}>{error}</div>}
-
-      <div className={styles.formGroup}>
-        <label htmlFor="customer">Customer:</label>
-        <select id="customer" value={selectedCustomer} onChange={handleCustomerChange}>
-          <option value="">Select a customer</option>
-          {customers.map(customer => (
-            <option key={customer.CustomerID} value={customer.CustomerID}>
-              {customer.FirstName} {customer.LastName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className={styles.formGroup}>
-        <label htmlFor="product">Product:</label>
-        <select id="product" value={selectedProduct} onChange={handleProductChange}>
-          <option value="">Select a product</option>
-          {products.map(product => (
-            <option key={product.ProductID} value={product.ProductID}>
-              {product.ProductName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <button onClick={handleCreateOrder} className={styles.createOrderButton}>
-        Create Order
-      </button>
-
-      {orderResult && (
-        <div className={styles.orderResult}>
-          <h3>Order Result:</h3>
-          <p>{orderResult.message}</p>
+        <div className="space-y-2">
+          <label htmlFor="customer" className="block text-sm font-medium">Customer:</label>
+          <Select value={selectedCustomer} onValueChange={handleCustomerChange}>
+            <SelectTrigger id="customer" className="w-full">
+              <SelectValue placeholder="Select a customer" />
+            </SelectTrigger>
+            <SelectContent>
+              {customers.map(customer => (
+                <SelectItem key={customer.CustomerID} value={customer.CustomerID}>
+                  {customer.FirstName} {customer.LastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      )}
-    </div>
+
+        <div className="space-y-2">
+          <label htmlFor="product" className="block text-sm font-medium">Product:</label>
+          <Select value={selectedProduct} onValueChange={handleProductChange}>
+            <SelectTrigger id="product" className="w-full">
+              <SelectValue placeholder="Select a product" />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map(product => (
+                <SelectItem key={product.ProductID} value={product.ProductID}>
+                  {product.ProductName} (${product.Price.toFixed(2)})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button 
+          onClick={handleCreateOrder} 
+          className="w-full" 
+          disabled={!selectedCustomer || !selectedProduct || loading}
+        >
+          <ShoppingCart className="mr-2 h-4 w-4" />
+          {loading ? 'Creating Order...' : 'Create Order'}
+        </Button>
+
+        {orderResult && (
+          <Card className="mt-4 bg-green-50">
+            <CardHeader>
+              <CardTitle className="text-lg">Order Confirmation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p><strong>Status:</strong> {orderResult.success ? 'Success' : 'Failed'}</p>
+              <p><strong>Message:</strong> {orderResult.message}</p>
+              {selectedCustomer && <p><strong>Customer:</strong> {getCustomerName(selectedCustomer)}</p>}
+              {selectedProduct && <p><strong>Product:</strong> {getProductName(selectedProduct)}</p>}
+            </CardContent>
+          </Card>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
