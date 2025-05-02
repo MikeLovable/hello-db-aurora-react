@@ -1,186 +1,179 @@
+import React, { useState, useEffect } from 'react';
+import { ApiService } from '@/services/ApiService';
+import { Product } from '@/types';
+import { Table, Input, Space, Button } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import Highlighter from 'react-highlight-words';
+import { SearchOutlined } from '@ant-design/icons';
 
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Search } from "lucide-react";
-import apiService, { Product, ApiResponse } from "../services/ApiService";
-import { toast } from "sonner";
+interface DataType {
+  key: string;
+  productID: string;
+  productName: string;
+  description: string;
+  category: string;
+  price: number;
+  stockQuantity: number;
+}
 
-/**
- * Product Tab Component
- * Allows viewing and searching for products
- */
-const ProductTab = () => {
+const ProductTab: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [searchedColumn, setSearchedColumn] = useState('');
+  const [searchInput, setSearchInput] = useState<Input | null>(null);
 
-  // Load product data on initial render
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  // Fetch products from API
-  const fetchProducts = async (productID?: string) => {
+  const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response: ApiResponse<Product> = await apiService.getProducts(
-        productID
-      );
-
-      if (response.error) {
-        toast.error("Failed to load products", {
-          description: response.error,
-        });
-      } else {
-        setProducts(response.data);
-        if (response.data.length === 0) {
-          toast.info("No products found");
-        }
-      }
+      const data = await ApiService.getProducts();
+      setProducts(data);
     } catch (error) {
-      console.error("Error fetching products:", error);
-      toast.error("Failed to load products");
+      console.error('Failed to fetch products:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle search form submission
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      fetchProducts(searchTerm);
-    } else {
-      fetchProducts();
-    }
+  const handleSearch = (selectedKeys: string[], confirm: (param?: any) => void, dataIndex: string) => {
+    confirm();
+    setSearchText(selectedKeys[0]);
+    setSearchedColumn(dataIndex);
   };
 
-  // Reset search and show all products
-  const handleReset = () => {
-    setSearchTerm("");
-    fetchProducts();
+  const handleReset = (clearFilters: () => void) => {
+    clearFilters();
+    setSearchText('');
   };
 
-  // Format price as currency
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Products</CardTitle>
-        <CardDescription>
-          Browse and search for products in the database
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSearch} className="flex gap-2 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="text"
-              placeholder="Search by Product ID (e.g., P0001)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <Button type="submit" disabled={loading}>
+  const getColumnSearchProps = (dataIndex: string): ColumnsType<DataType>[0] => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          ref={node => {
+            setSearchInput(node);
+          }}
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
             Search
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleReset}
-            disabled={loading}
-          >
+          <Button onClick={() => handleReset(clearFilters)} size="small" style={{ width: 90 }}>
             Reset
           </Button>
-        </form>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => {
+              confirm({ closeDropdown: false });
+              setSearchText((selectedKeys as string[])[0]);
+              setSearchedColumn(dataIndex);
+            }}
+          >
+            Filter
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered: boolean) => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+    onFilter: (value, record) =>
+      record[dataIndex]
+        .toString()
+        .toLowerCase()
+        .includes((value as string).toLowerCase()),
+    onFilterDropdownVisibleChange: visible => {
+      if (visible && searchInput) {
+        setTimeout(() => searchInput.select(), 100);
+      }
+    },
+    render: text =>
+      searchedColumn === dataIndex ? (
+        <Highlighter
+          highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+          searchWords={[searchText]}
+          autoEscape
+          textToHighlight={text ? text.toString() : ''}
+        />
+      ) : (
+        text
+      ),
+  });
 
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    Loading products...
-                  </TableCell>
-                </TableRow>
-              ) : products.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    No products found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                products.map((product) => (
-                  <TableRow key={product.ProductID}>
-                    <TableCell className="font-medium">
-                      {product.ProductID}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{product.ProductName}</div>
-                        <div className="text-sm text-gray-500">
-                          {product.Description.length > 60
-                            ? product.Description.substring(0, 60) + "..."
-                            : product.Description}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{product.Category}</TableCell>
-                    <TableCell>{formatPrice(product.Price)}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          product.StockQuantity > 10
-                            ? "bg-green-100 text-green-800"
-                            : product.StockQuantity > 0
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {product.StockQuantity} in stock
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+  const columns: ColumnsType<DataType> = [
+    {
+      title: 'Product ID',
+      dataIndex: 'productID',
+      key: 'productID',
+      ...getColumnSearchProps('productID'),
+    },
+    {
+      title: 'Product Name',
+      dataIndex: 'productName',
+      key: 'productName',
+      ...getColumnSearchProps('productName'),
+    },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+    },
+    {
+      title: 'Category',
+      dataIndex: 'category',
+      key: 'category',
+      filters: [
+        ...new Set(products.map(product => product.Category)).values()
+      ].map(category => ({
+        text: category,
+        value: category,
+      })),
+      onFilter: (value: string, record: Product) => record.Category === value,
+    },
+    {
+      title: 'Price',
+      dataIndex: 'Price',
+      key: 'Price',
+      sorter: (a: Product, b: Product) => a.Price - b.Price,
+    },
+    {
+      title: 'Stock Quantity',
+      dataIndex: 'StockQuantity',
+      key: 'StockQuantity',
+      sorter: (a: Product, b: Product) => a.StockQuantity - b.StockQuantity,
+    },
+  ];
+
+  const data: DataType[] = products.map(product => ({
+    key: product.ProductID,
+    productID: product.ProductID,
+    productName: product.ProductName,
+    description: product.Description,
+    category: product.Category,
+    Price: product.Price,
+    stockQuantity: product.StockQuantity,
+  }));
+
+  return (
+    <Table<DataType>
+      columns={columns}
+      dataSource={data}
+      loading={loading}
+    />
   );
 };
 

@@ -1,176 +1,123 @@
 
 /**
- * Types for API data
+ * Service for interacting with the HelloDB API
+ * Provides methods for fetching customers, products, orders and creating new orders
  */
-export interface Customer {
-  CustomerID: string;
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  Phone: string;
-  Address: string;
-  City: string;
-  State: string;
-  PostalCode: string;
-  Country: string;
-  CreatedAt: string;
-}
+export class ApiService {
+  // Base URL for the API - this would be replaced with the actual API URL from CDK outputs
+  private static readonly API_BASE_URL = 'https://yourapigatewayurl.execute-api.region.amazonaws.com/prod';
 
-export interface Product {
-  ProductID: string;
-  ProductName: string;
-  Description: string;
-  Category: string;
-  Price: number;
-  StockQuantity: number;
-  CreatedAt: string;
-}
-
-export interface Order {
-  OrderID: number;
-  CustomerID: string;
-  FirstName: string;
-  LastName: string;
-  OrderDate: string;
-  Status: string;
-  TotalAmount: number;
-  ProductID: string;
-  ProductName: string;
-  Quantity: number;
-  UnitPrice: number;
-}
-
-export interface ApiResponse<T> {
-  data: T[];
-  error?: string;
-}
-
-export interface TransactionResponse {
-  success: boolean;
-  message: string;
-  orderId?: number;
-}
-
-// Replace with your actual API Gateway URL
-const API_BASE_URL = 'https://yourapigatewayurl.execute-api.region.amazonaws.com/prod';
-
-/**
- * Service for making API calls to the AWS backend
- */
-class ApiService {
   /**
    * Fetch all customers or a specific customer by ID
+   * @param customerId Optional customer ID to fetch a specific customer
+   * @returns Promise resolving to customers data
    */
-  async getCustomers(customerID?: string): Promise<ApiResponse<Customer>> {
+  static async getCustomers(customerId?: string) {
     try {
-      let url = `${API_BASE_URL}/GetCustomers`;
-      if (customerID) {
-        url += `?CustomerID=${encodeURIComponent(customerID)}`;
+      const url = new URL(`${this.API_BASE_URL}/GetCustomers`);
+      if (customerId) {
+        url.searchParams.append('CustomerID', customerId);
       }
       
-      const response = await fetch(url);
+      const response = await fetch(url.toString());
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
-      return { data };
+      return await response.json();
     } catch (error) {
       console.error('Error fetching customers:', error);
-      return { data: [], error: error instanceof Error ? error.message : 'Unknown error' };
+      throw error;
     }
   }
-  
+
   /**
    * Fetch all products or a specific product by ID
+   * @param productId Optional product ID to fetch a specific product
+   * @returns Promise resolving to products data
    */
-  async getProducts(productID?: string): Promise<ApiResponse<Product>> {
+  static async getProducts(productId?: string) {
     try {
-      let url = `${API_BASE_URL}/GetProducts`;
-      if (productID) {
-        url += `?ProductID=${encodeURIComponent(productID)}`;
+      const url = new URL(`${this.API_BASE_URL}/GetProducts`);
+      if (productId) {
+        url.searchParams.append('ProductID', productId);
       }
       
-      const response = await fetch(url);
+      const response = await fetch(url.toString());
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
-      return { data };
+      return await response.json();
     } catch (error) {
       console.error('Error fetching products:', error);
-      return { data: [], error: error instanceof Error ? error.message : 'Unknown error' };
+      throw error;
     }
   }
-  
+
   /**
-   * Fetch orders with optional customer and product filters
+   * Fetch orders with optional filtering by customer ID or product ID
+   * @param customerId Optional customer ID to filter orders
+   * @param productId Optional product ID to filter orders
+   * @returns Promise resolving to orders data
    */
-  async getOrders(customerID?: string, productID?: string): Promise<ApiResponse<Order>> {
+  static async getOrders(customerId?: string, productId?: string) {
     try {
-      let url = `${API_BASE_URL}/GetOrders`;
-      const params = new URLSearchParams();
-      
-      if (customerID) {
-        params.append('CustomerID', customerID);
+      const url = new URL(`${this.API_BASE_URL}/GetOrders`);
+      if (customerId) {
+        url.searchParams.append('CustomerID', customerId);
+      }
+      if (productId) {
+        url.searchParams.append('ProductID', productId);
       }
       
-      if (productID) {
-        params.append('ProductID', productID);
-      }
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-      
-      const response = await fetch(url);
+      const response = await fetch(url.toString());
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
-      return { data };
+      return await response.json();
     } catch (error) {
       console.error('Error fetching orders:', error);
-      return { data: [], error: error instanceof Error ? error.message : 'Unknown error' };
+      throw error;
     }
   }
-  
+
   /**
-   * Create a new order transaction
+   * Create a new order for a customer and product
+   * @param customerId Customer ID making the order
+   * @param productId Product ID being ordered
+   * @returns Promise resolving to order creation result
    */
-  async transactOrder(customerID: string, productID: string): Promise<TransactionResponse> {
+  static async createOrder(customerId: string, productId: string) {
     try {
-      const url = `${API_BASE_URL}/TransactOrder?CustomerID=${encodeURIComponent(customerID)}&ProductID=${encodeURIComponent(productID)}`;
+      const url = new URL(`${this.API_BASE_URL}/TransactOrder`);
+      url.searchParams.append('CustomerID', customerId);
+      url.searchParams.append('ProductID', productId);
       
-      const response = await fetch(url, {
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
-      const data = await response.json();
-      
       if (!response.ok) {
-        return {
-          success: false,
-          message: data.message || 'Transaction failed',
-        };
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error('Error creating order transaction:', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
-      };
+      console.error('Error creating order:', error);
+      throw error;
     }
   }
-}
 
-// Create and export a singleton instance
-const apiService = new ApiService();
-export default apiService;
+  /**
+   * Update the API base URL - useful for configuration after deployment
+   * @param newUrl The new API base URL
+   */
+  static updateApiBaseUrl(newUrl: string) {
+    (this as any).API_BASE_URL = newUrl;
+  }
+}

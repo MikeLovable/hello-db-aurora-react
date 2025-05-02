@@ -1,159 +1,88 @@
+import React, { useState, useEffect } from 'react';
+import { ApiService } from '../services/ApiService';
+import { Customer } from '../types';
 
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Search } from "lucide-react";
-import apiService, { Customer, ApiResponse } from "../services/ApiService";
-import { toast } from "sonner";
-
-/**
- * Customer Tab Component
- * Allows viewing and searching for customers
- */
-const CustomerTab = () => {
+const CustomerTab: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [searchId, setSearchId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
-  // Load customer data on initial render
   useEffect(() => {
     fetchCustomers();
   }, []);
 
-  // Fetch customers from API
-  const fetchCustomers = async (customerID?: string) => {
-    setLoading(true);
+  const fetchCustomers = async () => {
     try {
-      const response: ApiResponse<Customer> = await apiService.getCustomers(customerID);
-      
-      if (response.error) {
-        toast.error("Failed to load customers", {
-          description: response.error,
-        });
-      } else {
-        setCustomers(response.data);
-        if (response.data.length === 0) {
-          toast.info("No customers found");
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      toast.error("Failed to load customers");
-    } finally {
-      setLoading(false);
+      const fetchedCustomers = searchId
+        ? await ApiService.getCustomers(searchId)
+        : await ApiService.getCustomers();
+      setCustomers(fetchedCustomers);
+      setError(null);
+    } catch (e: any) {
+      setError(e.message || 'Failed to fetch customers');
+      setCustomers([]);
     }
   };
 
-  // Handle search form submission
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchId(e.target.value);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      fetchCustomers(searchTerm);
-    } else {
-      fetchCustomers();
-    }
-  };
-
-  // Reset search and show all customers
-  const handleReset = () => {
-    setSearchTerm("");
     fetchCustomers();
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Customers</CardTitle>
-        <CardDescription>
-          Browse and search for customers in the database
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSearch} className="flex gap-2 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <Input
-              type="text"
-              placeholder="Search by Customer ID (e.g., C0001)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <Button type="submit" disabled={loading}>
-            Search
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleReset}
-            disabled={loading}
-          >
-            Reset
-          </Button>
-        </form>
-
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Location</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    Loading customers...
-                  </TableCell>
-                </TableRow>
-              ) : customers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    No customers found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                customers.map((customer) => (
-                  <TableRow key={customer.CustomerID}>
-                    <TableCell className="font-medium">
-                      {customer.CustomerID}
-                    </TableCell>
-                    <TableCell>
-                      {customer.FirstName} {customer.LastName}
-                    </TableCell>
-                    <TableCell>{customer.Email}</TableCell>
-                    <TableCell>{customer.Phone}</TableCell>
-                    <TableCell>
-                      {customer.City}, {customer.State}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="customer-tab">
+      <h2>Customers</h2>
+      <form onSubmit={handleSearchSubmit}>
+        <input
+          type="text"
+          placeholder="Search by Customer ID"
+          value={searchId}
+          onChange={handleSearchChange}
+        />
+        <button type="submit">Search</button>
+      </form>
+      {error && <div className="error">{error}</div>}
+      {customers.length > 0 ? (
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>City</th>
+              <th>State</th>
+              <th>Postal Code</th>
+              <th>Country</th>
+            </tr>
+          </thead>
+          <tbody>
+            {customers.map((customer) => (
+              <tr key={customer.CustomerID}>
+                <td>{customer.CustomerID}</td>
+                <td>{customer.FirstName}</td>
+                <td>{customer.LastName}</td>
+                <td>{customer.Email}</td>
+                <td>{customer.Phone}</td>
+                <td>{customer.Address}</td>
+                <td>{customer.City}</td>
+                <td>{customer.State}</td>
+                <td>{customer.PostalCode}</td>
+                <td>{customer.Country}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div>No customers found.</div>
+      )}
+    </div>
   );
 };
 

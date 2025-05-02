@@ -1,73 +1,72 @@
-# Welcome to your Lovable project
 
-## Project info
+# HelloDB Application
 
-**URL**: https://lovable.dev/projects/83640b14-61e8-4003-acb3-8536f4488be7
+This project is a two-tier web application with a React frontend and AWS backend.
 
-## How can I edit this code?
+## Project Structure
 
-There are several ways of editing your application.
+The project is organized into two main parts:
 
-**Use Lovable**
+### Frontend (React)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/83640b14-61e8-4003-acb3-8536f4488be7) and start prompting.
+The frontend is a React application located in the root directory:
 
-Changes made via Lovable will be committed automatically to this repo.
+- `src/` - React application source code
+- `public/` - Static assets
+- `package.json` - Frontend dependencies and scripts
 
-**Use your preferred IDE**
+### Backend (AWS CDK)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+The backend is implemented using AWS CDK and is located in the `cdk/` directory:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- `cdk/bin/` - CDK app entry point
+- `cdk/lib/` - CDK constructs and stacks
+- `cdk/SQLFiles/` - SQL files for database initialization
 
-Follow these steps:
+## Getting Started
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Frontend Setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Install dependencies:
+   ```
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. Start the development server:
+   ```
+   npm run dev
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Backend Setup
 
-**Edit a file directly in GitHub**
+1. Navigate to the CDK directory:
+   ```
+   cd cdk
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-**Use GitHub Codespaces**
+3. Deploy the AWS stack:
+   ```
+   npm run cdk deploy
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+4. After deployment, update the API URL in `src/services/ApiService.ts` with the API Gateway URL from the CDK outputs.
 
-## What technologies are used for this project?
+## Features
 
-This project is built with:
+- Browse and search Customers
+- Browse and search Products
+- Create Orders by selecting a Customer and Product
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Database Structure
 
-## How can I deploy this project?
+The application uses Aurora PostgreSQL Serverless with the following tables:
 
-Simply open [Lovable](https://lovable.dev/projects/83640b14-61e8-4003-acb3-8536f4488be7) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Customers
+- Products
+- Orders
+- OrderDetails
