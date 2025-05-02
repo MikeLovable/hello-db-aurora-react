@@ -41,9 +41,9 @@ export interface AuroraPGServerlessInitializedConstructProps {
   
   /**
    * VPC where the database will be deployed
-   * If not provided, a new VPC will be created
+   * Required parameter
    */
-  readonly vpc?: ec2.IVpc;
+  readonly vpc: ec2.IVpc;
   
   /**
    * Minimum ACU for serverless capacity
@@ -98,11 +98,8 @@ export class AuroraPGServerlessInitializedConstruct extends Construct {
 
     this.dbName = props.dbName;
     
-    // Create VPC if not provided
-    const vpc = props.vpc ?? new ec2.Vpc(this, 'DatabaseVpc', {
-      maxAzs: 2,
-      natGateways: 0, // To minimize costs
-    });
+    // Use the provided VPC instead of creating one
+    const vpc = props.vpc;
 
     // Create secrets for database users
     this.adminUserSecret = new secretsmanager.Secret(this, 'AdminUserSecret', {
@@ -152,8 +149,8 @@ export class AuroraPGServerlessInitializedConstruct extends Construct {
       }),
       vpc,
       scaling: {
-        minCapacity: rds.AuroraCapacityUnit.ACU_0_5, // Minimum ACU
-        maxCapacity: rds.AuroraCapacityUnit.ACU_1, // Maximum ACU
+        minCapacity: props.minAcu ? rds.AuroraCapacityUnit[`ACU_${props.minAcu}`] : rds.AuroraCapacityUnit.ACU_0_5, 
+        maxCapacity: props.maxAcu ? rds.AuroraCapacityUnit[`ACU_${props.maxAcu}`] : rds.AuroraCapacityUnit.ACU_1,
       },
       defaultDatabaseName: props.dbName,
       securityGroups: [dbSecurityGroup],

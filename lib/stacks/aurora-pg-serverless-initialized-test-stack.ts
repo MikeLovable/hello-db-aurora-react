@@ -153,13 +153,14 @@ VALUES
     );
     
     // Create Aurora PostgreSQL serverless database using our construct
+    // Now explicitly passing the required VPC parameter
     const auroraConstruct = new AuroraPGServerlessInitializedConstruct(this, 'AuroraDatabase', {
       dbName: 'hellodb',
       sqlFilesPath: 'SQLFiles',
       ddlFiles: [ddlFile1, ddlFile2],
       seedDataFiles: [],
       testFiles: [testFile1, testFile2],
-      vpc,
+      vpc, // Explicitly passing the VPC
       minAcu: 0.5,
       maxAcu: 1,
     });
