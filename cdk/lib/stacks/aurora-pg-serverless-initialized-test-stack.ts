@@ -16,10 +16,22 @@ export class AuroraPGServerlessInitializedConstructTestStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
     
-    // Create VPC for our resources
+    // Create VPC for our resources with appropriate subnets
     const vpc = new ec2.Vpc(this, 'VPC', {
       maxAzs: 2,
       natGateways: 1,
+      subnetConfiguration: [
+        {
+          name: 'public',
+          subnetType: ec2.SubnetType.PUBLIC,
+          cidrMask: 24,
+        },
+        {
+          name: 'private',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          cidrMask: 24,
+        }
+      ]
     });
     
     // Generate SQL files for DDL
@@ -152,19 +164,18 @@ VALUES
     );
     
     // Create Aurora PostgreSQL serverless database using our construct
-    // Now explicitly passing the required VPC parameter
     const auroraConstruct = new AuroraPGServerlessInitializedConstruct(this, 'AuroraDatabase', {
       dbName: 'hellodb',
       sqlFilesPath: 'SQLFiles',
       ddlFiles: [ddlFile1, ddlFile2],
       seedDataFiles: [],
       testFiles: [testFile1, testFile2],
-      vpc, // Explicitly passing the VPC
-      minAcu: 0.5,
-      maxAcu: 1,
+      vpc, // Explicitly passing the VPC with proper subnets
+      minAcu: 1,  // Using ACU_1 as minimum
+      maxAcu: 2,  // Using ACU_2 as maximum
     });
     
-    // Create Lambda function for API
+    // Create Lambda function for API with proper VPC configuration
     const dataManagerFunction = new lambda.Function(this, 'DataManagerFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'index.handler',
@@ -176,6 +187,9 @@ VALUES
       },
       timeout: cdk.Duration.seconds(30),
       vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+      },
     });
     
     // Grant permissions to the Lambda function

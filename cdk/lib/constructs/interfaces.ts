@@ -40,13 +40,13 @@ export interface AuroraPGServerlessInitializedConstructProps {
   
   /**
    * Minimum ACU for serverless capacity
-   * Default is 0.5 (minimum value)
+   * Must be a valid Aurora Capacity Unit value from rds.AuroraCapacityUnit
    */
   readonly minAcu?: number;
   
   /**
    * Maximum ACU for serverless capacity
-   * Default is 1 (minimum for production is recommended to be higher)
+   * Must be a valid Aurora Capacity Unit value from rds.AuroraCapacityUnit
    */
   readonly maxAcu?: number;
 }

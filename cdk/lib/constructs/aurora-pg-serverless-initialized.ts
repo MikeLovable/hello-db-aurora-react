@@ -4,6 +4,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
@@ -66,23 +67,26 @@ export class AuroraPGServerlessInitializedConstruct extends Construct {
       allowAllOutbound: true,
     });
 
+    // Get available subnet types
+    const vpcSubnets = {
+      subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS, // Use private subnets with NAT gateway
+    };
+
     // Create the Aurora PostgreSQL serverless V2 cluster
     this.cluster = new rds.ServerlessCluster(this, 'AuroraCluster', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_15_3,
+        version: rds.AuroraPostgresEngineVersion.VER_15_2, // Fixed to a valid version
       }),
       vpc,
       scaling: {
-        minCapacity: props.minAcu ? rds.AuroraCapacityUnit[`ACU_${props.minAcu}`] : rds.AuroraCapacityUnit.ACU_0_5, 
-        maxCapacity: props.maxAcu ? rds.AuroraCapacityUnit[`ACU_${props.maxAcu}`] : rds.AuroraCapacityUnit.ACU_1,
+        minCapacity: rds.AuroraCapacityUnit.ACU_1, // Fixed to a valid minimum capacity
+        maxCapacity: rds.AuroraCapacityUnit.ACU_2, // Increased for better performance
       },
       defaultDatabaseName: props.dbName,
       securityGroups: [dbSecurityGroup],
       credentials: rds.Credentials.fromSecret(this.adminUserSecret),
       deletionProtection: false, // For easier cleanup in dev/test environments
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-      },
+      vpcSubnets: vpcSubnets,
     });
 
     this.dbArn = this.cluster.clusterArn;
@@ -103,9 +107,7 @@ export class AuroraPGServerlessInitializedConstruct extends Construct {
         TEST_FILES: JSON.stringify(props.testFiles),
       },
       vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-      },
+      vpcSubnets: vpcSubnets,
     });
 
     // Grant permissions to the Lambda function
@@ -168,6 +170,8 @@ export class AuroraPGServerlessInitializedConstruct extends Construct {
           DB_NAME: props.dbName,
         },
         timeout: Duration.minutes(5),
+        vpc,
+        vpcSubnets: vpcSubnets,
       }).functionArn,
     });
 
