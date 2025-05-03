@@ -6,6 +6,7 @@ import CustomerTab from "./components/CustomerTab";
 import ProductTab from "./components/ProductTab";
 import OrderTab from "./components/OrderTab";
 import Navbar from "./components/Navbar";
+import ApiUrlConfig from "./components/ApiUrlConfig";
 
 /**
  * Main Application Component
@@ -22,6 +23,9 @@ const App = () => {
             <p className="text-slate-600 mt-2">
               A two-tier web application with React frontend and AWS backend
             </p>
+            
+            {/* API URL Configuration */}
+            <ApiUrlConfig />
           </div>
           
           <Tabs defaultValue="customers" className="w-full">

@@ -1,6 +1,7 @@
 
 import { Customer, Product, Order } from '@/types';
 import { MockApiService } from './MockApiService';
+import { ApiUrlDisplay } from '@/components/ApiUrlConfig';
 
 class ApiServiceClass {
   private baseUrl: string;
@@ -15,11 +16,26 @@ class ApiServiceClass {
   }
 
   /**
+   * Set the base URL for API calls
+   */
+  setBaseUrl(url: string) {
+    this.baseUrl = url;
+  }
+
+  /**
+   * Set API mode (true for API, false for mock)
+   */
+  setApiMode(useApi: boolean) {
+    this.useMock = !useApi;
+  }
+
+  /**
    * Get all customers or a specific customer by ID
    */
   async getCustomers(customerId?: string): Promise<Customer[]> {
-    // Use mock service for development
+    // Use mock service if specified
     if (this.useMock) {
+      ApiUrlDisplay.updateInvokedUrl('LOCAL');
       return MockApiService.getCustomers(customerId);
     }
     
@@ -28,6 +44,8 @@ class ApiServiceClass {
       if (customerId) {
         url += `?CustomerID=${encodeURIComponent(customerId)}`;
       }
+
+      ApiUrlDisplay.updateInvokedUrl(url);
 
       const response = await fetch(url);
       
@@ -47,8 +65,9 @@ class ApiServiceClass {
    * Get all products or a specific product by ID
    */
   async getProducts(productId?: string): Promise<Product[]> {
-    // Use mock service for development
+    // Use mock service if specified
     if (this.useMock) {
+      ApiUrlDisplay.updateInvokedUrl('LOCAL');
       return MockApiService.getProducts(productId);
     }
     
@@ -58,6 +77,8 @@ class ApiServiceClass {
         url += `?ProductID=${encodeURIComponent(productId)}`;
       }
 
+      ApiUrlDisplay.updateInvokedUrl(url);
+      
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -76,8 +97,9 @@ class ApiServiceClass {
    * Get orders filtered by customer ID and/or product ID
    */
   async getOrders(customerId?: string, productId?: string): Promise<Order[]> {
-    // Use mock service for development
+    // Use mock service if specified
     if (this.useMock) {
+      ApiUrlDisplay.updateInvokedUrl('LOCAL');
       return MockApiService.getOrders(customerId, productId);
     }
     
@@ -98,6 +120,8 @@ class ApiServiceClass {
         url += `?${queryString}`;
       }
 
+      ApiUrlDisplay.updateInvokedUrl(url);
+      
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -116,13 +140,16 @@ class ApiServiceClass {
    * Create a new order for a customer and product
    */
   async createOrder(customerId: string, productId: string): Promise<any> {
-    // Use mock service for development
+    // Use mock service if specified
     if (this.useMock) {
+      ApiUrlDisplay.updateInvokedUrl('LOCAL');
       return MockApiService.createOrder(customerId, productId);
     }
     
     try {
       const url = `${this.baseUrl}/TransactOrder?CustomerID=${encodeURIComponent(customerId)}&ProductID=${encodeURIComponent(productId)}`;
+      
+      ApiUrlDisplay.updateInvokedUrl(url);
       
       const response = await fetch(url, {
         method: 'POST',
