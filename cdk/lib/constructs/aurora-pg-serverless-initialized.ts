@@ -2,61 +2,13 @@
 import * as cdk from 'aws-cdk-lib';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
-import * as fs from 'fs';
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
-
-/**
- * Properties for the AuroraPGServerlessInitializedConstruct
- */
-export interface AuroraPGServerlessInitializedConstructProps {
-  /**
-   * The name of the database to create
-   */
-  readonly dbName: string;
-  
-  /**
-   * Relative path to the directory containing SQL files
-   */
-  readonly sqlFilesPath: string;
-  
-  /**
-   * Array of SQL file names for DDL (table creation)
-   */
-  readonly ddlFiles: string[];
-  
-  /**
-   * Array of SQL file names for seed data
-   */
-  readonly seedDataFiles: string[];
-  
-  /**
-   * Array of SQL file names for test data
-   */
-  readonly testFiles: string[];
-  
-  /**
-   * VPC where the database will be deployed
-   * Required parameter
-   */
-  readonly vpc: ec2.IVpc;
-  
-  /**
-   * Minimum ACU for serverless capacity
-   * Default is 0.5 (minimum value)
-   */
-  readonly minAcu?: number;
-  
-  /**
-   * Maximum ACU for serverless capacity
-   * Default is 1 (minimum for production is recommended to be higher)
-   */
-  readonly maxAcu?: number;
-}
+import { AuroraPGServerlessInitializedConstructProps, DatabaseSecrets } from './interfaces';
+import { DatabaseSecretsManager } from './database-secrets-manager';
 
 /**
  * A CDK construct that creates an Aurora PostgreSQL serverless V2 database
@@ -102,38 +54,10 @@ export class AuroraPGServerlessInitializedConstruct extends Construct {
     const vpc = props.vpc;
 
     // Create secrets for database users
-    this.adminUserSecret = new secretsmanager.Secret(this, 'AdminUserSecret', {
-      secretName: `${id}-admin-user-credentials`,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'adminuser' }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        includeSpace: false,
-        passwordLength: 16,
-      },
-    });
-
-    this.appUserSecret = new secretsmanager.Secret(this, 'AppUserSecret', {
-      secretName: `${id}-app-user-credentials`,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'appuser' }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        includeSpace: false,
-        passwordLength: 16,
-      },
-    });
-
-    this.customResourceUserSecret = new secretsmanager.Secret(this, 'CustomResourceUserSecret', {
-      secretName: `${id}-cr-user-credentials`,
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'cruser' }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        includeSpace: false,
-        passwordLength: 16,
-      },
-    });
+    const secrets = DatabaseSecretsManager.createDatabaseSecrets(this, id);
+    this.adminUserSecret = secrets.adminUserSecret;
+    this.appUserSecret = secrets.appUserSecret;
+    this.customResourceUserSecret = secrets.customResourceUserSecret;
 
     // Create security group for the database
     const dbSecurityGroup = new ec2.SecurityGroup(this, 'DatabaseSecurityGroup', {
